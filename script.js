@@ -8,6 +8,7 @@ const livesEl = document.getElementById("lives");
 const levelEl = document.getElementById("level");
 const boostEl = document.getElementById("boost");
 const bossStatusEl = document.getElementById("boss-status");
+const playerNameEl = document.getElementById("player-name");
 
 const overlay = document.getElementById("overlay");
 const overlayTitle = document.getElementById("overlay-title");
@@ -16,6 +17,7 @@ const startBtn = document.getElementById("start");
 const restartBtn = document.getElementById("restart");
 const settingsBtn = document.getElementById("settings-btn");
 const shopBtn = document.getElementById("shop-btn");
+const leaderboardBtn = document.getElementById("leaderboard-btn");
 const pauseBtn = document.getElementById("pause-btn");
 const hacksPanel = document.getElementById("hacks-panel");
 const hackBtn = document.getElementById("hack-btn");
@@ -24,10 +26,15 @@ const shooterBtn = document.getElementById("shooter-btn");
 
 const settingsPanel = document.getElementById("settings-panel");
 const shopPanel = document.getElementById("shop-panel");
+const leaderboardPanel = document.getElementById("leaderboard-panel");
 const shopCoinsEl = document.getElementById("shop-coins");
 const shopItemsEl = document.getElementById("shop-items");
 const shopLimitedFooterEl = document.getElementById("shop-limited-footer");
 const closeShopBtn = document.getElementById("close-shop");
+const leaderboardListEl = document.getElementById("leaderboard-list");
+const leaderboardStatusEl = document.getElementById("leaderboard-status");
+const refreshLeaderboardBtn = document.getElementById("refresh-leaderboard");
+const closeLeaderboardBtn = document.getElementById("close-leaderboard");
 const difficultySelect = document.getElementById("difficulty");
 const soundToggle = document.getElementById("sound-toggle");
 const musicToggle = document.getElementById("music-toggle");
@@ -35,6 +42,7 @@ const themeSelect = document.getElementById("theme-select");
 const brightnessRange = document.getElementById("brightness-range");
 const brightnessValue = document.getElementById("brightness-value");
 const languageSelect = document.getElementById("language-select");
+const playerNameInput = document.getElementById("player-name-input");
 const skinSelect = document.getElementById("skin-select");
 const backgroundSelect = document.getElementById("background-select");
 const pointsInput = document.getElementById("points-input");
@@ -58,6 +66,7 @@ let running = false;
 let paused = false;
 let wasRunningBeforeSettings = false;
 let wasRunningBeforeShop = false;
+let wasRunningBeforeLeaderboard = false;
 let lastHudUpdateAt = 0;
 let musicTimer = null;
 let musicStep = 0;
@@ -66,10 +75,15 @@ let activeMusicTrackId = null;
 const SETTINGS_KEY = "cometCollectorSettings";
 const HIGHSCORE_KEY = "cometCollectorHighScore";
 const PROGRESS_KEY = "cometCollectorProgress";
+const LEADERBOARD_KEY = "cometCollectorLeaderboard";
+const LEADERBOARD_LIMIT = 20;
+const REMOTE_LEADERBOARD_URL = "";
 
 const I18N = {
   en: {
     gameTitle: "Comet Collector",
+    labelPilot: "Pilot",
+    playerName: "Player Name",
     labelScore: "Score",
     labelHiScore: "Hi Score",
     labelCoins: "Coins",
@@ -80,6 +94,7 @@ const I18N = {
     controlsHelp: "Move: Arrow keys or A / D. On mobile: drag your finger.",
     settingsBtn: "Settings",
     shopBtn: "Shop",
+    leaderboardBtn: "Leaderboard",
     restartBtn: "Restart Game",
     pause: "Pause",
     resume: "Resume",
@@ -93,6 +108,8 @@ const I18N = {
     backgroundSetter: "Background Setter",
     cometSetter: "Comet Variant Setter",
     shopTitle: "Space Shop",
+    leaderboardTitle: "World Leaderboard",
+    leaderboardRefresh: "Refresh",
     settingsTitle: "Game Settings",
     close: "Close",
     save: "Save",
@@ -163,6 +180,8 @@ const I18N = {
   },
   es: {
     gameTitle: "Recolector de Cometas",
+    labelPilot: "Piloto",
+    playerName: "Nombre del Jugador",
     labelScore: "Puntos",
     labelHiScore: "Record",
     labelCoins: "Monedas",
@@ -173,6 +192,7 @@ const I18N = {
     controlsHelp: "Mover: Flechas o A / D. En movil: arrastra tu dedo.",
     settingsBtn: "Ajustes",
     shopBtn: "Tienda",
+    leaderboardBtn: "Tabla Global",
     restartBtn: "Reiniciar",
     pause: "Pausa",
     resume: "Continuar",
@@ -186,6 +206,8 @@ const I18N = {
     backgroundSetter: "Cambiar Fondo",
     cometSetter: "Cambiar Cometa",
     shopTitle: "Tienda Espacial",
+    leaderboardTitle: "Tabla Mundial",
+    leaderboardRefresh: "Actualizar",
     settingsTitle: "Ajustes del Juego",
     close: "Cerrar",
     save: "Guardar",
@@ -501,6 +523,7 @@ const state = {
     theme: "bright",
     brightness: 100,
     language: "en",
+    playerName: "Captain",
     skin: "classic",
     background: "deep",
     cometVariant: "star",
@@ -626,6 +649,7 @@ function applyLanguageToUi() {
   };
 
   setText("game-title", strings.gameTitle);
+  setText("label-pilot", strings.labelPilot);
   setText("label-score", strings.labelScore);
   setText("label-hi-score", strings.labelHiScore);
   setText("label-coins", strings.labelCoins);
@@ -636,6 +660,7 @@ function applyLanguageToUi() {
   setText("controls-help", strings.controlsHelp);
   setText("settings-btn", strings.settingsBtn);
   setText("shop-btn", strings.shopBtn);
+  setText("leaderboard-btn", strings.leaderboardBtn);
   setText("restart", strings.restartBtn);
   setText("hacks-title", strings.hacksTitle);
   setText("hacks-tip", strings.hacksTip);
@@ -647,10 +672,13 @@ function applyLanguageToUi() {
   setText("label-hack-background", strings.backgroundSetter);
   setText("label-hack-comet", strings.cometSetter);
   setText("shop-title", strings.shopTitle);
+  setText("leaderboard-title", strings.leaderboardTitle);
+  setText("refresh-leaderboard", strings.leaderboardRefresh);
   setText("settings-title", strings.settingsTitle);
   setText("save-settings", strings.save);
   setText("close-settings", strings.close);
   setText("close-shop", strings.close);
+  setText("close-leaderboard", strings.close);
 
   const soundLabel = document.querySelector('label[for="sound-toggle"] span');
   const musicLabel = document.querySelector('label[for="music-toggle"] span');
@@ -662,6 +690,7 @@ function applyLanguageToUi() {
   if (themeLabel) themeLabel.textContent = strings.theme;
   if (brightnessLabel) brightnessLabel.textContent = strings.brightness;
   if (languageLabel) languageLabel.textContent = strings.language;
+  setText("label-player-name", strings.playerName);
 
   const brightOption = themeSelect.querySelector('option[value="bright"]');
   const darkOption = themeSelect.querySelector('option[value="dark"]');
@@ -676,6 +705,7 @@ function applyLanguageToUi() {
   if (!shopPanel.classList.contains("hidden")) {
     renderShop();
   }
+  playerNameEl.textContent = state.settings.playerName;
   updateHud(true);
 }
 
@@ -683,6 +713,7 @@ function togglePause() {
   if (overlay.classList.contains("hidden") === false) return;
   if (settingsPanel.classList.contains("hidden") === false) return;
   if (shopPanel.classList.contains("hidden") === false) return;
+  if (leaderboardPanel.classList.contains("hidden") === false) return;
 
   paused = !paused;
   running = !paused;
@@ -1067,6 +1098,117 @@ function closeShop(restorePlay) {
   syncMusicPlayback();
 }
 
+function getLocalLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((row) => row && Number.isFinite(row.score))
+      .map((row) => ({
+        name: (String(row.name || "Computer").trim().slice(0, 24) || "Computer"),
+        score: Math.max(0, Math.floor(row.score)),
+        level: Math.max(1, Math.floor(row.level || 1)),
+        at: Number.isFinite(row.at) ? row.at : Date.now(),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, LEADERBOARD_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+function setLocalLeaderboard(entries) {
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT)));
+}
+
+function addLeaderboardEntry() {
+  const entries = getLocalLeaderboard();
+  entries.push({
+    name: state.settings.playerName || "Computer",
+    score: state.score,
+    level: state.level,
+    at: Date.now(),
+  });
+  entries.sort((a, b) => b.score - a.score);
+  setLocalLeaderboard(entries);
+}
+
+async function getLeaderboardEntries() {
+  if (!REMOTE_LEADERBOARD_URL) {
+    leaderboardStatusEl.textContent = "World mode offline: showing this device leaderboard.";
+    return getLocalLeaderboard();
+  }
+
+  try {
+    const res = await fetch(REMOTE_LEADERBOARD_URL, { method: "GET" });
+    if (!res.ok) throw new Error("remote failed");
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("invalid payload");
+    const entries = data
+      .filter((row) => row && Number.isFinite(row.score))
+      .map((row) => ({
+        name: (String(row.name || "Computer").trim().slice(0, 24) || "Computer"),
+        score: Math.max(0, Math.floor(row.score)),
+        level: Math.max(1, Math.floor(row.level || 1)),
+        at: Number.isFinite(row.at) ? row.at : Date.now(),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, LEADERBOARD_LIMIT);
+    leaderboardStatusEl.textContent = "World leaderboard online.";
+    return entries;
+  } catch {
+    leaderboardStatusEl.textContent = "World mode unavailable: showing this device leaderboard.";
+    return getLocalLeaderboard();
+  }
+}
+
+function renderLeaderboard(entries) {
+  leaderboardListEl.innerHTML = "";
+  if (entries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "shop-item";
+    empty.innerHTML = '<div><p class="shop-item-title">No scores yet</p><p class="shop-item-desc">Play a game to post the first score.</p></div>';
+    leaderboardListEl.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    const row = document.createElement("div");
+    row.className = "shop-item";
+    const left = document.createElement("div");
+    const title = document.createElement("p");
+    title.className = "shop-item-title";
+    title.textContent = `#${i + 1} ${entries[i].name}`;
+    const desc = document.createElement("p");
+    desc.className = "shop-item-desc";
+    desc.textContent = `Score ${entries[i].score} | Level ${entries[i].level}`;
+    left.appendChild(title);
+    left.appendChild(desc);
+    row.appendChild(left);
+    leaderboardListEl.appendChild(row);
+  }
+}
+
+async function openLeaderboard() {
+  wasRunningBeforeLeaderboard = running;
+  running = false;
+  syncMusicPlayback();
+  leaderboardPanel.classList.remove("hidden");
+  leaderboardStatusEl.textContent = "Loading leaderboard...";
+  const entries = await getLeaderboardEntries();
+  renderLeaderboard(entries);
+}
+
+function closeLeaderboard(restorePlay) {
+  leaderboardPanel.classList.add("hidden");
+  if (restorePlay && wasRunningBeforeLeaderboard && overlay.classList.contains("hidden")) {
+    running = true;
+  }
+  syncMusicPlayback();
+}
+
 function saveHighScoreIfNeeded() {
   if (state.score <= state.highScore) return;
   state.highScore = state.score;
@@ -1190,10 +1332,8 @@ function applyManualLevel() {
 }
 
 function applyManualLives() {
-  const addLives = Number.parseInt(livesInput.value, 10);
-  if (!Number.isFinite(addLives)) return;
-
-  state.lives = Math.max(0, Math.min(9999, state.lives + Math.max(0, addLives)));
+  state.lives = Math.max(0, Math.min(9999, state.lives + 1));
+  livesInput.value = "1";
   updateHud();
 }
 
@@ -1486,6 +1626,7 @@ function saveSettings() {
   state.settings.theme = themeSelect.value;
   state.settings.brightness = Number.parseInt(brightnessRange.value, 10) || 100;
   state.settings.language = languageSelect.value;
+  state.settings.playerName = (playerNameInput.value || "").trim().slice(0, 24) || "Captain";
   state.settings.skin = skinSelect.value;
   state.settings.background = backgroundSelect.value;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
@@ -1504,6 +1645,7 @@ function applySettingsToForm() {
   themeSelect.value = state.settings.theme;
   brightnessRange.value = String(state.settings.brightness);
   languageSelect.value = state.settings.language;
+  playerNameInput.value = state.settings.playerName;
   applyVisualSettings();
   applyLanguageToUi();
   renderSkinOptions();
@@ -1540,6 +1682,9 @@ function loadSettings() {
     }
     if (parsed.language && I18N[parsed.language]) {
       state.settings.language = parsed.language;
+    }
+    if (typeof parsed.playerName === "string") {
+      state.settings.playerName = parsed.playerName.trim().slice(0, 24) || "Captain";
     }
     if (parsed.skin && SKINS[parsed.skin]) {
       state.settings.skin = parsed.skin;
@@ -1729,6 +1874,7 @@ function update() {
   if (state.lives <= 0) {
     const strings = getStrings();
     saveHighScoreIfNeeded();
+    addLeaderboardEntry();
     running = false;
     paused = false;
     setPauseButtonLabel();
@@ -2209,6 +2355,10 @@ shopBtn.addEventListener("click", () => {
   openShop();
 });
 
+leaderboardBtn.addEventListener("click", () => {
+  openLeaderboard();
+});
+
 pauseBtn.addEventListener("click", () => {
   togglePause();
 });
@@ -2263,6 +2413,16 @@ closeSettingsBtn.addEventListener("click", () => {
 
 closeShopBtn.addEventListener("click", () => {
   closeShop(true);
+});
+
+refreshLeaderboardBtn.addEventListener("click", async () => {
+  leaderboardStatusEl.textContent = "Loading leaderboard...";
+  const entries = await getLeaderboardEntries();
+  renderLeaderboard(entries);
+});
+
+closeLeaderboardBtn.addEventListener("click", () => {
+  closeLeaderboard(true);
 });
 
 brightnessRange.addEventListener("input", () => {

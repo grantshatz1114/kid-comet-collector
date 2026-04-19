@@ -17,6 +17,7 @@
       <header class="hud" aria-live="polite">
         <h1 id="game-title">Comet Collector</h1>
         <div class="stats">
+          <p><span id="label-pilot">Pilot</span>: <span id="player-name">Captain</span></p>
           <p><span id="label-score">Score</span>: <span id="score">0</span></p>
           <p><span id="label-hi-score">Hi Score</span>: <span id="hi-score">0</span></p>
           <p><span id="label-coins">Coins</span>: <span id="coins">0</span></p>
@@ -38,6 +39,7 @@
         <div class="control-buttons">
           <button id="settings-btn" type="button">Settings</button>
           <button id="shop-btn" type="button">Shop</button>
+          <button id="leaderboard-btn" type="button">Leaderboard</button>
           <button id="pause-btn" type="button">Pause</button>
           <button id="restart" type="button">Restart Game</button>
         </div>
@@ -52,6 +54,18 @@
         <p id="shop-limited-footer" class="shop-limited-footer"></p>
         <div class="settings-actions">
           <button id="close-shop" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="shop-panel hidden" id="leaderboard-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title">
+      <div class="shop-card">
+        <h2 id="leaderboard-title">World Leaderboard</h2>
+        <p class="shop-coins" id="leaderboard-status">Top scores from players.</p>
+        <div id="leaderboard-list" class="shop-items"></div>
+        <div class="settings-actions">
+          <button id="refresh-leaderboard" type="button">Refresh</button>
+          <button id="close-leaderboard" type="button">Close</button>
         </div>
       </div>
     </div>
@@ -78,8 +92,8 @@
 
       <label for="lives-input" id="label-lives-input">Life Adder</label>
       <div class="points-row">
-        <input id="lives-input" type="number" value="1" min="0" max="9999" step="1" />
-        <button id="apply-lives" type="button">Add</button>
+        <input id="lives-input" type="number" value="1" min="1" max="1" step="1" readonly />
+        <button id="apply-lives" type="button">+1</button>
       </div>
 
       <label for="coins-input" id="label-coins-input">Coin Adder</label>
@@ -143,6 +157,9 @@
           <option value="en">English</option>
           <option value="es">Espanol</option>
         </select>
+
+        <label for="player-name-input" id="label-player-name">Player Name</label>
+        <input id="player-name-input" type="text" maxlength="24" value="Captain" />
 
         <label for="skin-select">Skin</label>
         <select id="skin-select"></select>
