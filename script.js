@@ -87,7 +87,7 @@ const I18N = {
     hacksTip: "Press Z to show or hide",
     pointsChanger: "Points Changer",
     levelSetter: "Level Setter",
-    lifeSetter: "Life Setter",
+    lifeSetter: "Life Adder",
     coinAdder: "Coin Adder",
     skinSetter: "Skin Setter",
     backgroundSetter: "Background Setter",
@@ -180,7 +180,7 @@ const I18N = {
     hacksTip: "Presiona Z para mostrar u ocultar",
     pointsChanger: "Cambiar Puntos",
     levelSetter: "Cambiar Nivel",
-    lifeSetter: "Cambiar Vidas",
+    lifeSetter: "Sumar Vidas",
     coinAdder: "Agregar Monedas",
     skinSetter: "Cambiar Skin",
     backgroundSetter: "Cambiar Fondo",
@@ -1190,10 +1190,10 @@ function applyManualLevel() {
 }
 
 function applyManualLives() {
-  const nextLives = Number.parseInt(livesInput.value, 10);
-  if (!Number.isFinite(nextLives)) return;
+  const addLives = Number.parseInt(livesInput.value, 10);
+  if (!Number.isFinite(addLives)) return;
 
-  state.lives = Math.max(0, Math.min(9999, nextLives));
+  state.lives = Math.max(0, Math.min(9999, state.lives + Math.max(0, addLives)));
   updateHud();
 }
 
