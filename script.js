@@ -25,6 +25,15 @@ const stopTimeBtn = document.getElementById("stop-time-btn");
 const shooterBtn = document.getElementById("shooter-btn");
 const invincibleBtn = document.getElementById("invincible-btn");
 
+const profilesBtn = document.getElementById("profiles-btn");
+const profilesPanel = document.getElementById("profiles-panel");
+const profilesList = document.getElementById("profiles-list");
+const newProfileInput = document.getElementById("new-profile-input");
+const createProfileBtn = document.getElementById("create-profile-btn");
+const deleteProfileBtn = document.getElementById("delete-profile-btn");
+const closeProfilesBtn = document.getElementById("close-profiles");
+const currentProfileNameEl = document.getElementById("current-profile-name");
+
 const settingsPanel = document.getElementById("settings-panel");
 const shopPanel = document.getElementById("shop-panel");
 const leaderboardPanel = document.getElementById("leaderboard-panel");
@@ -77,6 +86,8 @@ const SETTINGS_KEY = "cometCollectorSettings";
 const HIGHSCORE_KEY = "cometCollectorHighScore";
 const PROGRESS_KEY = "cometCollectorProgress";
 const LEADERBOARD_KEY = "cometCollectorLeaderboard";
+const PROFILES_KEY = "cometCollectorProfiles";
+const CURRENT_PROFILE_KEY = "cometCollectorCurrentProfile";
 const LEADERBOARD_LIMIT = 20;
 const REMOTE_LEADERBOARD_URL = "";
 
@@ -96,6 +107,7 @@ const I18N = {
     settingsBtn: "Settings",
     shopBtn: "Shop",
     leaderboardBtn: "Leaderboard",
+    profilesBtn: "Profiles",
     restartBtn: "Restart Game",
     pause: "Pause",
     resume: "Resume",
@@ -195,6 +207,7 @@ const I18N = {
     settingsBtn: "Ajustes",
     shopBtn: "Tienda",
     leaderboardBtn: "Tabla Global",
+    profilesBtn: "Perfiles",
     restartBtn: "Reiniciar",
     pause: "Pausa",
     resume: "Continuar",
@@ -278,6 +291,85 @@ const I18N = {
     shopSlowTimeDesc: "Efecto de caida lenta por tiempo limitado.",
     shopExtraLifeTitle: "Vida Extra",
     shopExtraLifeDesc: "Consigue +1 vida al instante.",
+  },
+};
+
+function getStrings() {
+  return I18N[state.settings.language] || I18N.en;
+}
+
+function formatI18n(text, values) {
+  return text.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ""));
+}
+
+// ============ PROFILE MANAGER (Abstracted for cloud migration) ============
+
+const ProfileManager = {
+  // Storage abstraction - can be replaced with API calls for cloud backend
+  async getAllProfiles() {
+    const data = localStorage.getItem(PROFILES_KEY);
+    return data ? JSON.parse(data) : { Default: this.getDefaultProfileData() };
+  },
+
+  async getProfile(name) {
+    const profiles = await this.getAllProfiles();
+    return profiles[name] || null;
+  },
+
+  async saveProfile(name, data) {
+    const profiles = await this.getAllProfiles();
+    profiles[name] = data;
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  },
+
+  async deleteProfile(name) {
+    if (name === "Default") return false; // Can't delete default profile
+    const profiles = await this.getAllProfiles();
+    delete profiles[name];
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+    return true;
+  },
+
+  async listProfiles() {
+    const profiles = await this.getAllProfiles();
+    return Object.keys(profiles);
+  },
+
+  getCurrentProfile() {
+    return localStorage.getItem(CURRENT_PROFILE_KEY) || "Default";
+  },
+
+  setCurrentProfile(name) {
+    localStorage.setItem(CURRENT_PROFILE_KEY, name);
+  },
+
+  getDefaultProfileData() {
+    return {
+      score: 0,
+      highScore: 0,
+      coins: 0,
+      lives: 3,
+      level: 1,
+      settings: {
+        difficulty: "normal",
+        sound: true,
+        music: true,
+        theme: "bright",
+        brightness: 100,
+        language: "en",
+        playerName: "Captain",
+        skin: "classic",
+        background: "deep",
+        cometVariant: "star",
+      },
+      unlockedSkins: ["classic"],
+      unlockedBackgrounds: ["deep"],
+      unlockedCometVariants: ["star"],
+      shop: {
+        speedLevel: 0,
+      },
+      hackUnlocked: false,
+    };
   },
 };
 
@@ -507,6 +599,7 @@ const MUSIC_TRACKS = {
 };
 
 const state = {
+  currentProfile: "Default",
   score: 0,
   highScore: 0,
   coins: 0,
@@ -556,6 +649,50 @@ const state = {
   items: [],
   particles: [],
 };
+
+async function loadProfile(profileName) {
+  const profileData = await ProfileManager.getProfile(profileName);
+  if (!profileData) return false;
+
+  state.currentProfile = profileName;
+  state.score = profileData.score || 0;
+  state.highScore = profileData.highScore || 0;
+  state.coins = profileData.coins || 0;
+  state.settings = profileData.settings || state.settings;
+  state.unlockedSkins = profileData.unlockedSkins || ["classic"];
+  state.unlockedBackgrounds = profileData.unlockedBackgrounds || ["deep"];
+  state.unlockedCometVariants = profileData.unlockedCometVariants || ["star"];
+  state.shop = profileData.shop || { speedLevel: 0 };
+  state.hackUnlocked = profileData.hackUnlocked || false;
+
+  ProfileManager.setCurrentProfile(profileName);
+  updateProfileUI();
+  return true;
+}
+
+async function saveProfile() {
+  const profileData = {
+    score: state.score,
+    highScore: state.highScore,
+    coins: state.coins,
+    settings: state.settings,
+    unlockedSkins: state.unlockedSkins,
+    unlockedBackgrounds: state.unlockedBackgrounds,
+    unlockedCometVariants: state.unlockedCometVariants,
+    shop: state.shop,
+    hackUnlocked: state.hackUnlocked,
+  };
+  await ProfileManager.saveProfile(state.currentProfile, profileData);
+}
+
+async function updateProfileUI() {
+  const profiles = await ProfileManager.listProfiles();
+  profilesList.innerHTML = profiles
+    .map(name => `<option value="${name}">${name}</option>`)
+    .join("");
+  profilesList.value = state.currentProfile;
+  currentProfileNameEl.textContent = state.currentProfile;
+}
 
 function resetGame() {
   const preset = getPreset();
@@ -1887,6 +2024,7 @@ function update() {
   if (state.lives <= 0) {
     const strings = getStrings();
     saveHighScoreIfNeeded();
+    saveProfile();
     addLeaderboardEntry();
     running = false;
     paused = false;
@@ -2378,6 +2516,13 @@ leaderboardBtn.addEventListener("click", () => {
   openLeaderboard();
 });
 
+profilesBtn.addEventListener("click", async () => {
+  await updateProfileUI();
+  wasRunningBeforeSettings = running;
+  running = false;
+  profilesPanel.classList.remove("hidden");
+});
+
 pauseBtn.addEventListener("click", () => {
   togglePause();
 });
@@ -2448,6 +2593,49 @@ closeLeaderboardBtn.addEventListener("click", () => {
   closeLeaderboard(true);
 });
 
+profilesList.addEventListener("change", async (e) => {
+  await loadProfile(e.target.value);
+  await saveProfile();
+});
+
+createProfileBtn.addEventListener("click", async () => {
+  const name = newProfileInput.value.trim();
+  if (!name) {
+    alert("Please enter a profile name");
+    return;
+  }
+  if (name.length > 24) {
+    alert("Profile name too long (max 24 characters)");
+    return;
+  }
+  const profiles = await ProfileManager.listProfiles();
+  if (profiles.includes(name)) {
+    alert("Profile already exists");
+    return;
+  }
+  await ProfileManager.saveProfile(name, ProfileManager.getDefaultProfileData());
+  await loadProfile(name);
+  newProfileInput.value = "";
+  updateHud();
+});
+
+deleteProfileBtn.addEventListener("click", async () => {
+  if (state.currentProfile === "Default") {
+    alert("Cannot delete the Default profile");
+    return;
+  }
+  if (confirm(`Delete profile "${state.currentProfile}"?`)) {
+    await ProfileManager.deleteProfile(state.currentProfile);
+    await loadProfile("Default");
+    updateHud();
+  }
+});
+
+closeProfilesBtn.addEventListener("click", () => {
+  profilesPanel.classList.add("hidden");
+  running = wasRunningBeforeSettings;
+});
+
 brightnessRange.addEventListener("input", () => {
   const value = Number.parseInt(brightnessRange.value, 10) || 100;
   state.settings.brightness = value;
@@ -2493,6 +2681,14 @@ applyVisualSettings();
 applyLanguageToUi();
 setPauseButtonLabel();
 handleResize();
-loop();
-const initialStrings = getStrings();
-showOverlay(initialStrings.overlayReadyTitle, initialStrings.overlayReadyText, initialStrings.start);
+
+// Initialize profile system
+(async () => {
+  const currentProfile = ProfileManager.getCurrentProfile();
+  await loadProfile(currentProfile);
+  updateHud();
+  loop();
+  const initialStrings = getStrings();
+  showOverlay(initialStrings.overlayReadyTitle, initialStrings.overlayReadyText, initialStrings.start);
+})();
+

@@ -37,6 +37,7 @@
           Move: Arrow keys or A / D. On mobile: drag your finger.
         </p>
         <div class="control-buttons">
+          <button id="profiles-btn" type="button">Profiles</button>
           <button id="settings-btn" type="button">Settings</button>
           <button id="shop-btn" type="button">Shop</button>
           <button id="leaderboard-btn" type="button">Leaderboard</button>
@@ -171,6 +172,27 @@
         <div class="settings-actions">
           <button id="save-settings" type="button">Save</button>
           <button id="close-settings" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="shop-panel hidden" id="profiles-panel" role="dialog" aria-modal="true" aria-labelledby="profiles-title">
+      <div class="shop-card">
+        <h2 id="profiles-title">Player Profiles</h2>
+        <p class="shop-coins" id="profiles-current">Current: <span id="current-profile-name">Default</span></p>
+        
+        <label for="profiles-list" id="label-profiles-list">Select Profile</label>
+        <select id="profiles-list" style="width: 100%; margin-bottom: 10px;"></select>
+        
+        <label for="new-profile-input" id="label-new-profile">New Profile Name</label>
+        <div class="points-row">
+          <input id="new-profile-input" type="text" placeholder="Enter profile name" maxlength="24" />
+          <button id="create-profile-btn" type="button">Create</button>
+        </div>
+        
+        <div class="settings-actions">
+          <button id="delete-profile-btn" type="button" style="background-color: #ff6b6b;">Delete</button>
+          <button id="close-profiles" type="button">Close</button>
         </div>
       </div>
     </div>
