@@ -89,7 +89,7 @@ const LEADERBOARD_KEY = "cometCollectorLeaderboard";
 const PROFILES_KEY = "cometCollectorProfiles";
 const CURRENT_PROFILE_KEY = "cometCollectorCurrentProfile";
 const LEADERBOARD_LIMIT = 20;
-const REMOTE_LEADERBOARD_URL = "";
+const REMOTE_LEADERBOARD_URL = ""; // Set your leaderboard API endpoint here for online mode
 
 const I18N = {
   en: {
@@ -1235,13 +1235,38 @@ function closeShop(restorePlay) {
   syncMusicPlayback();
 }
 
-function getLocalLeaderboard() {
-  try {
-    const raw = localStorage.getItem(LEADERBOARD_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
+const LeaderboardService = {
+  async getLocalEntries() {
+    try {
+      const raw = localStorage.getItem(LEADERBOARD_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((row) => row && Number.isFinite(row.score))
+        .map((row) => ({
+          name: (String(row.name || "Computer").trim().slice(0, 24) || "Computer"),
+          score: Math.max(0, Math.floor(row.score)),
+          level: Math.max(1, Math.floor(row.level || 1)),
+          at: Number.isFinite(row.at) ? row.at : Date.now(),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, LEADERBOARD_LIMIT);
+    } catch {
+      return [];
+    }
+  },
+
+  setLocalEntries(entries) {
+    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT)));
+  },
+
+  async fetchRemoteEntries() {
+    const response = await fetch(REMOTE_LEADERBOARD_URL, { method: "GET" });
+    if (!response.ok) throw new Error("remote failed");
+    const payload = await response.json();
+    if (!Array.isArray(payload)) throw new Error("invalid payload");
+    return payload
       .filter((row) => row && Number.isFinite(row.score))
       .map((row) => ({
         name: (String(row.name || "Computer").trim().slice(0, 24) || "Computer"),
@@ -1251,53 +1276,57 @@ function getLocalLeaderboard() {
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, LEADERBOARD_LIMIT);
-  } catch {
-    return [];
-  }
-}
+  },
 
-function setLocalLeaderboard(entries) {
-  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT)));
-}
+  async postEntry(entry) {
+    if (!REMOTE_LEADERBOARD_URL) {
+      const entries = await this.getLocalEntries();
+      entries.push(entry);
+      entries.sort((a, b) => b.score - a.score);
+      this.setLocalEntries(entries);
+      return false;
+    }
 
-function addLeaderboardEntry() {
-  const entries = getLocalLeaderboard();
-  entries.push({
+    try {
+      const response = await fetch(REMOTE_LEADERBOARD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      return response.ok;
+    } catch {
+      const entries = await this.getLocalEntries();
+      entries.push(entry);
+      entries.sort((a, b) => b.score - a.score);
+      this.setLocalEntries(entries);
+      return false;
+    }
+  },
+};
+
+async function addLeaderboardEntry() {
+  const entry = {
     name: state.settings.playerName || "Computer",
     score: state.score,
     level: state.level,
     at: Date.now(),
-  });
-  entries.sort((a, b) => b.score - a.score);
-  setLocalLeaderboard(entries);
+  };
+  await LeaderboardService.postEntry(entry);
 }
 
 async function getLeaderboardEntries() {
   if (!REMOTE_LEADERBOARD_URL) {
     leaderboardStatusEl.textContent = "World mode offline: showing this device leaderboard.";
-    return getLocalLeaderboard();
+    return LeaderboardService.getLocalEntries();
   }
 
   try {
-    const res = await fetch(REMOTE_LEADERBOARD_URL, { method: "GET" });
-    if (!res.ok) throw new Error("remote failed");
-    const data = await res.json();
-    if (!Array.isArray(data)) throw new Error("invalid payload");
-    const entries = data
-      .filter((row) => row && Number.isFinite(row.score))
-      .map((row) => ({
-        name: (String(row.name || "Computer").trim().slice(0, 24) || "Computer"),
-        score: Math.max(0, Math.floor(row.score)),
-        level: Math.max(1, Math.floor(row.level || 1)),
-        at: Number.isFinite(row.at) ? row.at : Date.now(),
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, LEADERBOARD_LIMIT);
+    const entries = await LeaderboardService.fetchRemoteEntries();
     leaderboardStatusEl.textContent = "World leaderboard online.";
     return entries;
   } catch {
     leaderboardStatusEl.textContent = "World mode unavailable: showing this device leaderboard.";
-    return getLocalLeaderboard();
+    return LeaderboardService.getLocalEntries();
   }
 }
 

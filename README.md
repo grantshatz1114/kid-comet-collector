@@ -25,5 +25,33 @@ A simple, kid-friendly browser game.
 
 ## Notes
 
-- No install needed.
+- No install needed for the frontend.
 - All files are plain HTML/CSS/JS.
+
+## Leaderboard backend
+
+A small Node.js backend is now included in this repo to support the online leaderboard.
+
+### Run locally
+
+1. Install dependencies: `npm install`
+2. Start the backend: `npm start`
+3. By default it listens on port `3000`.
+
+The backend exposes:
+
+- `GET /leaderboard` — fetch the top 20 scores
+- `POST /leaderboard` — submit a score
+
+### Deploy to Render
+
+1. Create a new Node web service on Render using this repository.
+2. Set the build command to `npm install`.
+3. Set the start command to `npm start`.
+4. After deployment, use the service URL plus `/leaderboard` as `REMOTE_LEADERBOARD_URL` in `script.js`.
+
+### Important
+
+- The frontend can still be hosted on GitHub Pages.
+- The backend handles cross-origin requests so GitHub Pages can call it directly.
+- For production use, attach a managed database or persistent store instead of relying on the local SQLite file.
