@@ -608,7 +608,7 @@ const state = {
   nextBossLevel: 100,
   spawnTick: 0,
   targetX: null,
-  activeBoost: null,
+  activeBoosts: [],
   boss: null,
   bossShooterUntil: 0,
   bossLastShotAt: 0,
@@ -664,6 +664,7 @@ async function loadProfile(profileName) {
   state.unlockedCometVariants = profileData.unlockedCometVariants || ["star"];
   state.shop = profileData.shop || { speedLevel: 0 };
   state.hackUnlocked = profileData.hackUnlocked || false;
+  state.activeBoosts = []; // Reset runtime boosts
 
   ProfileManager.setCurrentProfile(profileName);
   updateProfileUI();
@@ -2681,11 +2682,13 @@ handleResize();
 
 // Initialize profile system
 (async () => {
-  const currentProfile = ProfileManager.getCurrentProfile();
-  await loadProfile(currentProfile);
+  let currentProfile = ProfileManager.getCurrentProfile();
+  if (!(await loadProfile(currentProfile))) {
+    await loadProfile("Default");
+    ProfileManager.setCurrentProfile("Default");
+  }
   updateHud();
   loop();
   const initialStrings = getStrings();
   showOverlay(initialStrings.overlayReadyTitle, initialStrings.overlayReadyText, initialStrings.start);
 })();
-
