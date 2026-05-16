@@ -50,12 +50,6 @@ const leaderboardListEl = document.getElementById("leaderboard-list");
 const leaderboardStatusEl = document.getElementById("leaderboard-status");
 const refreshLeaderboardBtn = document.getElementById("refresh-leaderboard");
 const closeLeaderboardBtn = document.getElementById("close-leaderboard");
-const communityPlayerCountEl = document.getElementById("community-player-count");
-const communityGamesCountEl = document.getElementById("community-games-count");
-const communityLastSyncEl = document.getElementById("community-last-sync");
-const publicLeaderboardBodyEl = document.getElementById("public-leaderboard-body");
-const communityRefreshBtn = document.getElementById("community-refresh");
-const apiHelpEl = document.getElementById("api-help");
 const difficultySelect = document.getElementById("difficulty");
 const soundToggle = document.getElementById("sound-toggle");
 const musicToggle = document.getElementById("music-toggle");
@@ -92,7 +86,6 @@ let lastHudUpdateAt = 0;
 let musicTimer = null;
 let musicStep = 0;
 let activeMusicTrackId = null;
-let communityRefreshTimer = null;
 
 const SETTINGS_KEY = "cometCollectorSettings";
 const HIGHSCORE_KEY = "cometCollectorHighScore";
@@ -103,7 +96,6 @@ const CURRENT_PROFILE_KEY = "cometCollectorCurrentProfile";
 const LEADERBOARD_LIMIT = 20;
 const REMOTE_API_BASE_URL = ""; // Set your backend service root URL here for online user management and leaderboard
 const REMOTE_LEADERBOARD_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/leaderboard` : "";
-const REMOTE_STATS_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/stats` : "";
 const REMOTE_USER_LOGIN_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/users/login` : "";
 const REMOTE_USER_PROFILE_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/users` : "";
 
@@ -1403,18 +1395,6 @@ const LeaderboardService = {
       .slice(0, LEADERBOARD_LIMIT);
   },
 
-  async fetchRemoteStats() {
-    if (!REMOTE_STATS_URL) throw new Error("stats offline");
-    const response = await fetch(REMOTE_STATS_URL, { method: "GET" });
-    if (!response.ok) throw new Error("stats unavailable");
-    const payload = await response.json();
-    return {
-      totalPlayers: Number.isFinite(payload.totalPlayers) ? Math.max(0, Math.floor(payload.totalPlayers)) : 0,
-      gamesPlayed: Number.isFinite(payload.gamesPlayed) ? Math.max(0, Math.floor(payload.gamesPlayed)) : 0,
-      source: String(payload.source || "remote"),
-    };
-  },
-
   async postEntry(entry) {
     if (!REMOTE_LEADERBOARD_URL) {
       const entries = await this.getLocalEntries();
@@ -1492,85 +1472,6 @@ function renderLeaderboard(entries) {
     row.appendChild(left);
     leaderboardListEl.appendChild(row);
   }
-}
-
-function renderPublicLeaderboard(entries) {
-  if (!publicLeaderboardBodyEl) return;
-  publicLeaderboardBodyEl.innerHTML = "";
-
-  if (entries.length === 0) {
-    const row = document.createElement("tr");
-    row.innerHTML = "<td colspan=\"4\">No scores yet. Play a round to set the first score.</td>";
-    publicLeaderboardBodyEl.appendChild(row);
-    return;
-  }
-
-  const topRows = entries.slice(0, 10);
-  for (let i = 0; i < topRows.length; i++) {
-    const row = document.createElement("tr");
-    const item = topRows[i];
-    const rankCell = document.createElement("td");
-    rankCell.textContent = String(i + 1);
-    const nameCell = document.createElement("td");
-    nameCell.textContent = item.name;
-    const scoreCell = document.createElement("td");
-    scoreCell.textContent = String(item.score);
-    const levelCell = document.createElement("td");
-    levelCell.textContent = String(item.level);
-    row.appendChild(rankCell);
-    row.appendChild(nameCell);
-    row.appendChild(scoreCell);
-    row.appendChild(levelCell);
-    publicLeaderboardBodyEl.appendChild(row);
-  }
-}
-
-async function getLocalCommunityStats() {
-  const [entries, profiles] = await Promise.all([
-    LeaderboardService.getLocalEntries(),
-    ProfileManager.listProfiles(),
-  ]);
-  return {
-    totalPlayers: profiles.length,
-    gamesPlayed: entries.length,
-    entries,
-  };
-}
-
-async function refreshCommunityHub() {
-  if (!communityPlayerCountEl || !communityGamesCountEl || !communityLastSyncEl || !publicLeaderboardBodyEl) {
-    return;
-  }
-
-  communityLastSyncEl.textContent = "Refreshing...";
-
-  let stats;
-  let entries;
-  let sourceLabel = "Local mode";
-
-  if (REMOTE_API_BASE_URL) {
-    try {
-      [stats, entries] = await Promise.all([
-        LeaderboardService.fetchRemoteStats(),
-        LeaderboardService.fetchRemoteEntries(),
-      ]);
-      sourceLabel = "Online";
-    } catch {
-      const local = await getLocalCommunityStats();
-      stats = local;
-      entries = local.entries;
-      sourceLabel = "Fallback to local";
-    }
-  } else {
-    const local = await getLocalCommunityStats();
-    stats = local;
-    entries = local.entries;
-  }
-
-  communityPlayerCountEl.textContent = String(stats.totalPlayers);
-  communityGamesCountEl.textContent = String(stats.gamesPlayed);
-  renderPublicLeaderboard(entries);
-  communityLastSyncEl.textContent = `Last updated: ${new Date().toLocaleTimeString()} (${sourceLabel})`;
 }
 
 async function openLeaderboard() {
@@ -2831,12 +2732,6 @@ refreshLeaderboardBtn.addEventListener("click", async () => {
   renderLeaderboard(entries);
 });
 
-if (communityRefreshBtn) {
-  communityRefreshBtn.addEventListener("click", async () => {
-    await refreshCommunityHub();
-  });
-}
-
 closeLeaderboardBtn.addEventListener("click", () => {
   closeLeaderboard(true);
 });
@@ -2939,10 +2834,6 @@ applyLanguageToUi();
 setPauseButtonLabel();
 handleResize();
 
-if (apiHelpEl && REMOTE_API_BASE_URL) {
-  apiHelpEl.textContent = `Connected to backend: ${REMOTE_API_BASE_URL}`;
-}
-
 // Initialize profile system
 (async () => {
   let currentProfile = ProfileManager.getCurrentProfile();
@@ -2951,11 +2842,6 @@ if (apiHelpEl && REMOTE_API_BASE_URL) {
     ProfileManager.setCurrentProfile("Default");
   }
   updateHud();
-  await refreshCommunityHub();
-  if (communityRefreshTimer) {
-    clearInterval(communityRefreshTimer);
-  }
-  communityRefreshTimer = setInterval(refreshCommunityHub, 60000);
   loop();
   openLoginPanel();
 })();

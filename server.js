@@ -63,30 +63,6 @@ app.get("/leaderboard", (_req, res) => {
   );
 });
 
-app.get("/stats", (_req, res) => {
-  db.get("SELECT COUNT(*) AS totalPlayers FROM users", (usersErr, usersRow) => {
-    if (usersErr) {
-      console.error("Stats users count failed:", usersErr);
-      return res.status(500).json({ error: "database error" });
-    }
-
-    db.get("SELECT COUNT(*) AS gamesPlayed FROM leaderboard", (gamesErr, gamesRow) => {
-      if (gamesErr) {
-        console.error("Stats leaderboard count failed:", gamesErr);
-        return res.status(500).json({ error: "database error" });
-      }
-
-      const totalPlayers = Number.isFinite(usersRow?.totalPlayers) ? usersRow.totalPlayers : 0;
-      const gamesPlayed = Number.isFinite(gamesRow?.gamesPlayed) ? gamesRow.gamesPlayed : 0;
-      res.json({
-        totalPlayers,
-        gamesPlayed,
-        source: "remote",
-      });
-    });
-  });
-});
-
 app.post("/leaderboard", (req, res) => {
   const name = String(req.body.name || "Computer").trim().slice(0, 24) || "Computer";
   const score = Number.isFinite(req.body.score) ? Math.max(0, Math.floor(req.body.score)) : null;

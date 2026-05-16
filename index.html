@@ -50,68 +50,6 @@
           <button id="restart" type="button">Restart Game</button>
         </div>
       </section>
-
-      <section class="community-hub" aria-labelledby="community-title">
-        <div class="hub-head">
-          <h2 id="community-title">Comet Collector Help Hub</h2>
-          <button id="community-refresh" type="button">Refresh Stats</button>
-        </div>
-
-        <div class="hub-grid">
-          <article class="hub-card">
-            <h3>Tips</h3>
-            <ul>
-              <li>Focus on movement first, score second. Missing comets costs lives.</li>
-              <li>Collect shields before risky waves to protect streaks.</li>
-              <li>Use slow-time boosts when meteor speed starts to ramp.</li>
-              <li>Farm coins early and buy long-term upgrades first.</li>
-            </ul>
-          </article>
-
-          <article class="hub-card">
-            <h3>If The Game Shuts Down</h3>
-            <ol>
-              <li>Refresh the page and try again.</li>
-              <li>If leaderboard is offline, continue in local mode while backend recovers.</li>
-              <li>Check your backend URL in script.js (REMOTE_API_BASE_URL).</li>
-              <li>Confirm your backend service is online, then refresh stats.</li>
-            </ol>
-            <p class="hub-note" id="api-help">Tip: set your backend URL in script.js for online stats.</p>
-          </article>
-        </div>
-
-        <div class="hub-grid">
-          <article class="hub-card">
-            <h3>Player Activity</h3>
-            <div class="metric-grid">
-              <p><span class="metric-label">Players</span><span class="metric-value" id="community-player-count">-</span></p>
-              <p><span class="metric-label">Games Logged</span><span class="metric-value" id="community-games-count">-</span></p>
-            </div>
-            <p class="hub-note" id="community-last-sync">Waiting for first refresh...</p>
-          </article>
-
-          <article class="hub-card">
-            <h3>Public Leaderboard</h3>
-            <div class="public-board-wrap">
-              <table class="public-board" aria-label="Public leaderboard table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Player</th>
-                    <th>Score</th>
-                    <th>Level</th>
-                  </tr>
-                </thead>
-                <tbody id="public-leaderboard-body">
-                  <tr>
-                    <td colspan="4">Loading...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </section>
     </main>
 
     <div class="shop-panel hidden" id="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shop-title">
@@ -291,4 +229,3 @@
     <script src="script.js"></script>
   </body>
 </html>
-<!--press_z_for_admin -->
