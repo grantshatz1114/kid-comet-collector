@@ -27,6 +27,7 @@ A simple, kid-friendly browser game.
 
 - No install needed for the frontend.
 - All files are plain HTML/CSS/JS.
+- The main page now includes a Help Hub with gameplay tips, outage troubleshooting, live player activity, and a public leaderboard table.
 
 ## Leaderboard backend
 
@@ -42,6 +43,7 @@ The backend exposes:
 
 - `GET /leaderboard` — fetch the top 20 scores
 - `POST /leaderboard` — submit a score
+- `GET /stats` — fetch total players and total games played
 - `POST /users/login` — create or sign in with a username only
 - `GET /users/:username` — fetch user profile data
 - `PUT /users/:username` — update user profile data
@@ -52,6 +54,14 @@ The backend exposes:
 2. Set the build command to `npm install`.
 3. Set the start command to `npm start`.
 4. After deployment, set `REMOTE_API_BASE_URL` in `script.js` to the service URL.
+
+### Deploy frontend to Netlify
+
+1. Push this repository to GitHub.
+2. In Netlify, create a new site from that GitHub repository.
+3. Build command: leave empty.
+4. Publish directory: `.` (project root).
+5. Set `REMOTE_API_BASE_URL` in `script.js` to your deployed backend URL so Help Hub stats and online leaderboard can load.
 
 ### Important
 
